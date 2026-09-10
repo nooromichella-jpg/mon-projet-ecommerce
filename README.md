@@ -1,4 +1,4 @@
-# NourStore 🛒
+# NourStore 
 
 NourStore est une plateforme e-commerce moderne et performante, dotée d'un tableau de bord administrateur sécurisé, d'une gestion de stock en temps réel, d'un suivi analytique des ventes et de notifications automatisées.
 
