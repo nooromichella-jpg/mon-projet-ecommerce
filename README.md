@@ -46,4 +46,4 @@ nourstore/
 ├── lib/                # Configuration (Firebase, services externes)
 ├── services/           # Logique métier et appels de données
 ├── package.json        # Dépendances du projet
-└── README.md           # Documentation du projet
+└── README.md           # Documentation du projet"# mon-projet-ecommerce"  
