@@ -52,7 +52,7 @@ Stocke l'historique des achats effectués par les clients.
 
 ---
 
-## 3. 🔌 Documentation des API
+## 3. Documentation des API
 
 L'application expose des routes API REST pour interagir avec Firestore de manière sécurisée.
 
