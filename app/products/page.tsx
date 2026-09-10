@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion'; // 👈 Import de Framer Motion
+import { motion } from 'framer-motion';  
 import ProductSkeleton from '@/components/ProductSkeleton';
 import { useCartStore } from '@/store/useCartStore';
 import toast from 'react-hot-toast';
+import Link from 'next/link'; // 👈 Ne pas oublier d'importer Link
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -59,7 +60,7 @@ export default function ProductsPage() {
             visible: {
               opacity: 1,
               transition: {
-                staggerChildren: 0.1, // Effet cascade : chaque carte apparaît 0.1s après la précédente
+                staggerChildren: 0.1,
               },
             },
           }}
@@ -72,7 +73,7 @@ export default function ProductsPage() {
                 hidden: { opacity: 0, y: 30 },
                 visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
               }}
-              whileHover={{ y: -6, transition: { duration: 0.2 } }} // Petit soulèvement au survol comme sur la page d'accueil
+              whileHover={{ y: -6, transition: { duration: 0.2 } }}
               className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 flex flex-col hover:shadow-xl transition-shadow"
             >
               <div className="w-full h-52 overflow-hidden rounded-xl bg-gray-100 mb-4 relative group">
@@ -84,15 +85,27 @@ export default function ProductsPage() {
               </div>
               <h3 className="font-bold text-lg text-gray-900 mb-1">{product.name}</h3>
               <p className="text-emerald-600 font-bold text-xl mb-4">{product.price.toLocaleString()} Ar</p>
-              <button 
-                onClick={() => {
-                  addItem(product);
-                  toast.success(`${product.name} ajouté au panier !`);
-                }}
-                className="mt-auto bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 rounded-xl font-medium transition"
-              >
-                Ajouter 🛒
-              </button>
+              
+              {/* 🛠️ CONTENEUR DES BOUTONS : Détails + Ajouter */}
+              <div className="mt-auto flex items-center gap-2">
+                <Link 
+                  href={`/products/${product.id}`}
+                  className="flex-1 text-center bg-gray-100 hover:bg-gray-200 text-gray-800 py-2.5 rounded-xl font-medium text-sm transition"
+                >
+                  Détails
+                </Link>
+
+                <button 
+                  onClick={() => {
+                    addItem(product);
+                    toast.success(`${product.name} ajouté au panier !`);
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 rounded-xl font-medium text-sm transition"
+                >
+                  Ajouter 🛒
+                </button>
+              </div>
+
             </motion.div>
           ))}
         </motion.div>

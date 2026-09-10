@@ -1,10 +1,11 @@
 // app/checkout/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -12,6 +13,9 @@ import Link from 'next/link';
 export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
   const router = useRouter();
+
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -21,6 +25,40 @@ export default function CheckoutPage() {
   });
 
   const [loading, setLoading] = useState(false);
+
+  // 1. Vérifier l'authentification et pré-remplir les données du profil client
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        toast.error("Veuillez vous connecter pour passer une commande.");
+        router.push('/login');
+        return;
+      }
+
+      setUser(currentUser);
+
+      try {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setFormData((prev) => ({
+            ...prev,
+            fullName: userData.displayName || currentUser.displayName || '',
+            phone: userData.phone || '',
+            address: userData.address || '',
+          }));
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du profil pour le checkout :", error);
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -54,8 +92,9 @@ export default function CheckoutPage() {
         }
       }
 
-      // 2. Enregistrement de la commande dans la collection Firestore "orders"
+      // 2. Enregistrement de la commande dans la collection Firestore "orders" avec l'ID du client si besoin
       await addDoc(collection(db, 'orders'), {
+        userId: user ? user.uid : null,
         customer: formData,
         items: items,
         totalAmount: totalPrice,
@@ -91,13 +130,21 @@ export default function CheckoutPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-sm text-gray-500 animate-pulse">Vérification de votre compte...</p>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
         <span className="text-6xl mb-4 block">🛒</span>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Votre panier est vide</h1>
         <p className="text-gray-500 mb-6">Ajoutez des produits avant de passer à la caisse.</p>
-        <Link href="/products" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition">
+        <Link href="/" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition">
           Voir les produits
         </Link>
       </div>
@@ -106,12 +153,20 @@ export default function CheckoutPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Finaliser la commande</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-extrabold text-gray-900">Finaliser la commande</h1>
+        <div className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium">
+          🔒 Identité vérifiée ({user?.email})
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* Formulaire de livraison */}
         <form onSubmit={handleSubmitOrder} className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm space-y-6">
-          <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Informations de livraison</h2>
+          <div className="border-b pb-4">
+            <h2 className="text-xl font-bold text-gray-900">Informations de livraison</h2>
+            <p className="text-xs text-gray-500 mt-1">Vérifiez vos coordonnées issues de votre profil avant de confirmer.</p>
+          </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Nom complet</label>

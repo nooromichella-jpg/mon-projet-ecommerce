@@ -19,20 +19,14 @@ export default function AdminLayout({
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // Si on est sur la page de login (/admin/login), on n'affiche pas la sidebar admin
-  const isLoginPage = pathname === '/admin/login';
-
+  // Étant donné qu'on utilise une page de login unique (/login), 
+  // on gère l'authentification directement sur les routes /admin
   useEffect(() => {
-    if (isLoginPage) {
-      setLoadingAuth(false);
-      return;
-    }
-
     // Vérification de l'état de l'authentification Firebase
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        // Pas connecté -> Redirection vers la page de login admin
-        router.push('/admin/login');
+        // Pas connecté -> Redirection vers la page de login unique
+        router.push('/login');
       } else {
         // Connecté -> Vérification du rôle admin dans Firestore
         try {
@@ -42,25 +36,23 @@ export default function AdminLayout({
           if (userDoc.exists() && userDoc.data().isAdmin === true) {
             setIsAdminAuthorized(true);
           } else {
-            // Connecté mais pas admin
+            // Connecté mais pas admin -> Déconnexion et redirection vers /login
             await signOut(auth);
-            router.push('/admin/login');
+            router.push('/login');
           }
         } catch (err) {
           console.error("Erreur de vérification des droits :", err);
-          router.push('/admin/login');
+          router.push('/login');
         }
       }
       setLoadingAuth(false);
     });
 
     return () => unsubscribeAuth();
-  }, [isLoginPage, router]);
+  }, [router]);
 
   // Écoute en temps réel des commandes pour le badge de notification
   useEffect(() => {
-    if (isLoginPage) return;
-
     const unsubscribeOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
       let count = 0;
       snapshot.docs.forEach(docSnap => {
@@ -76,20 +68,15 @@ export default function AdminLayout({
     });
 
     return () => unsubscribeOrders();
-  }, [isLoginPage]);
+  }, []);
 
   // Affichage d'un écran de chargement pendant la vérification des droits
-  if (loadingAuth && !isLoginPage) {
+  if (loadingAuth) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <p className="text-xs font-mono text-slate-500 animate-pulse">Vérification des accès administrateur...</p>
       </div>
     );
-  }
-
-  // Si c'est la page de login, on affiche uniquement le contenu (le formulaire de connexion) sans la sidebar
-  if (isLoginPage) {
-    return <>{children}</>;
   }
 
   // Si l'utilisateur n'est pas autorisé, on ne rend rien (la redirection va s'opérer)
@@ -141,9 +128,9 @@ export default function AdminLayout({
           <button
             onClick={async () => {
               await signOut(auth);
-              router.push('/admin/login');
+              router.push('/login');
             }}
-            className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg transition font-medium text-center"
+            className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg transition font-medium text-center cursor-pointer"
           >
             Déconnexion Admin
           </button>

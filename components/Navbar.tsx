@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useCartStore } from '../store/useCartStore';
 import CartDrawer from './CartDrawer';
 
@@ -16,6 +16,10 @@ interface Product {
 }
 
 export default function Navbar() {
+  // Tous les hooks au début
+  const pathname = usePathname();
+  const router = useRouter();
+  
   const cartItemsCount = useCartStore((state) => 
     state.items.reduce((total, item) => total + (item.quantity || 1), 0)
   );
@@ -25,9 +29,7 @@ export default function Navbar() {
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
-  // Effet pour récupérer et filtrer les produits en temps réel
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       setIsSearching(true);
@@ -38,7 +40,7 @@ export default function Navbar() {
             const filtered = data.data.filter((product: Product) =>
               product.name.toLowerCase().includes(searchQuery.toLowerCase())
             );
-            setSuggestions(filtered.slice(0, 5)); // Limiter à 5 suggestions max
+            setSuggestions(filtered.slice(0, 5));
           }
           setIsSearching(false);
         })
@@ -49,7 +51,6 @@ export default function Navbar() {
     }
   }, [searchQuery]);
 
-  // Fermer les suggestions si on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -59,6 +60,11 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Le return conditionnel à la fin (après les hooks)
+  if (pathname === '/login' || pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +82,6 @@ export default function Navbar() {
              <span className="text-emerald-600 hover:opacity-90 transition">NourStore</span>
           </Link>
 
-          {/* Barre de recherche avec suggestions instantanées */}
           <div className="flex-1 max-w-md mx-4 relative" ref={searchRef}>
             <form onSubmit={handleSearchSubmit} className="relative flex">
               <input
@@ -94,7 +99,6 @@ export default function Navbar() {
               </button>
             </form>
 
-            {/* 🌟 Liste déroulante des suggestions en temps réel */}
             {suggestions.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
                 {suggestions.map((product) => (
@@ -132,9 +136,11 @@ export default function Navbar() {
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 border border-gray-200 transform hover:scale-105 active:scale-95 shadow-xs cursor-pointer"
             >
               <span>Panier</span>
-              <span className="bg-emerald-600 text-white font-bold text-xs px-2 py-0.5 rounded-full transition-transform animate-pulse">
-                {cartItemsCount}
-              </span>
+              {cartItemsCount > 0 && (
+                <span className="bg-emerald-600 text-white font-bold text-xs px-2 py-0.5 rounded-full transition-transform animate-pulse">
+                  {cartItemsCount}
+                </span>
+              )}
             </button>
           </div>
         </div>

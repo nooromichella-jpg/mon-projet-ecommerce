@@ -1,6 +1,5 @@
 // app/api/admin/orders/route.ts
 import { NextResponse } from 'next/server';
-// Ici tu pourrais utiliser firebase-admin côté serveur si besoin
 
 export async function GET() {
   try {

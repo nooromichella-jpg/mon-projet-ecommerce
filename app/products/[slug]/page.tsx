@@ -17,7 +17,8 @@ interface Product {
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const slug = params.slug;
+  // Sécurisation pour récupérer le paramètre de l'URL proprement
+  const identifier = params?.slug as string;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -26,9 +27,13 @@ export default function ProductDetailPage() {
   const addItem = useCartStore((state) => state.addItem);
 
   useEffect(() => {
-    if (!slug) return;
+    // Si l'identifiant est absent ou vaut "undefined", on arrête tout
+    if (!identifier || identifier === 'undefined') {
+      setLoading(false);
+      return;
+    }
 
-    fetch(`/api/products/${slug}`)
+    fetch(`/api/products/${identifier}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -40,7 +45,7 @@ export default function ProductDetailPage() {
         console.error('Erreur :', err);
         setLoading(false);
       });
-  }, [slug]);
+  }, [identifier]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -77,7 +82,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-gray-900">
-      {/* 🚀 On applique ton animation personnalisée ici ! */}
       <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200 animate-fade-in">
         <Link 
           href="/products" 
@@ -87,7 +91,6 @@ export default function ProductDetailPage() {
         </Link>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-2 items-center">
-          {/* Image avec transition au survol */}
           <div className="w-full h-80 overflow-hidden rounded-xl bg-gray-100 shadow-inner">
             <img 
               src={product.image} 
@@ -101,7 +104,6 @@ export default function ProductDetailPage() {
             <p className="text-3xl text-emerald-600 font-bold mb-4">{product.price.toLocaleString()} Ar</p>
             <p className="text-gray-600 mb-8 leading-relaxed">{product.description || "Aucune description détaillée n'est disponible pour ce produit."}</p>
             
-            {/* Bouton avec effet de clic et de survol */}
             <button 
               onClick={handleAddToCart}
               className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-8 py-3.5 rounded-xl transition-all shadow-md font-semibold flex items-center justify-center gap-2 cursor-pointer"
