@@ -45,14 +45,30 @@ export default function AdminAnalyticsPage() {
           else if (status.includes('annul')) statuses.cancelled++;
           else statuses.pending++;
 
+          // Extraction correcte de la date pour le tri et l'affichage
+          let rawDate = 0;
+          if (data.createdAt) {
+            if (typeof data.createdAt.seconds === 'number') {
+              rawDate = data.createdAt.seconds * 1000;
+            } else if (data.createdAt.toDate) {
+              rawDate = data.createdAt.toDate().getTime();
+            } else {
+              rawDate = new Date(data.createdAt).getTime() || 0;
+            }
+          }
+
           ordersList.push({
             id: docSnap.id,
             amount: amount,
             customerName: data.customer?.fullName ?? data.customer?.name ?? data.customerName ?? 'Client inconnu',
             status: data.status ?? data.statut ?? 'En attente',
-            createdAt: data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString('fr-FR') : 'Récemment'
+            rawDate: rawDate,
+            createdAt: rawDate ? new Date(rawDate).toLocaleDateString('fr-FR') : 'Récemment'
           });
         });
+
+        // TRI DES COMMANDES : De la plus récente à la plus ancienne
+        ordersList.sort((a, b) => b.rawDate - a.rawDate);
 
         setStats({
           totalRevenue: revenue,
@@ -60,7 +76,9 @@ export default function AdminAnalyticsPage() {
           averageBasket: count > 0 ? Math.round(revenue / count) : 0,
           statusCounts: statuses
         });
-        setRecentOrders(ordersList.slice(0, 5)); // Les 5 dernières commandes
+        
+        // On prend les 5 commandes les plus récentes
+        setRecentOrders(ordersList.slice(0, 5)); 
       } catch (err) {
         console.error("Erreur lors du calcul des statistiques :", err);
       } finally {

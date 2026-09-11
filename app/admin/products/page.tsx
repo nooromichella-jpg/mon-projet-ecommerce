@@ -5,11 +5,15 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { LayoutGrid, List, AlertTriangle } from 'lucide-react';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // État pour basculer entre vue Tableau et vue Grille
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   
   // États pour les modales
   const [selectedProduct, setSelectedProduct] = useState<any>(null); // Pour "Détails"
@@ -28,7 +32,8 @@ export default function AdminProductsPage() {
           resolvedPrice: data.price || data.prix || 0,
           resolvedStock: data.stock !== undefined ? data.stock : (data.quantity || 0),
           resolvedImage: data.image || data.imageUrl || data.photo || '',
-          resolvedDescription: data.description || 'Aucune description disponible.'
+          resolvedDescription: data.description || 'Aucune description disponible.',
+          resolvedCategory: data.category || 'Général'
         };
       });
       setProducts(list);
@@ -66,7 +71,8 @@ export default function AdminProductsPage() {
         name: editingProduct.resolvedName,
         price: Number(editingProduct.resolvedPrice),
         stock: Number(editingProduct.resolvedStock),
-        description: editingProduct.resolvedDescription
+        description: editingProduct.resolvedDescription,
+        category: editingProduct.resolvedCategory
       });
       setEditingProduct(null);
       fetchProducts(); // Recharge la liste
@@ -88,12 +94,30 @@ export default function AdminProductsPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Catalogue des produits</h1>
           <p className="text-xs text-slate-500 mt-0.5">Gérez votre inventaire, les prix et les stocks de la boutique.</p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-sm"
-        >
-          + Nouveau Produit
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Boutons de bascule de vue Admin (Tableau / Grille) corrigés */}
+          <div className="hidden sm:flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition cursor-pointer text-xs flex items-center gap-1.5 px-3 font-medium ${viewMode === 'table' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <List className="w-3.5 h-3.5" /> Tableau
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition cursor-pointer text-xs flex items-center gap-1.5 px-3 font-medium ${viewMode === 'grid' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> Grille
+            </button>
+          </div>
+
+          <Link
+            href="/admin/products/new"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-sm"
+          >
+            + Nouveau Produit
+          </Link>
+        </div>
       </div>
 
       {/* Barre de recherche */}
@@ -110,104 +134,124 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Tableau */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center">
-            <p className="text-slate-400 font-mono text-xs">Chargement du catalogue...</p>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <p className="text-slate-500 text-xs">Aucun produit trouvé.</p>
-            <Link href="/admin/products/new" className="text-xs font-semibold text-emerald-600 hover:underline">
-              Ajouter votre premier produit
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Produit</th>
-                  <th className="py-3 px-4">Prix</th>
-                  <th className="py-3 px-4">Stock</th>
-                  <th className="py-3 px-4">Statut Stock</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {filteredProducts.map((product) => {
-                  const isLowStock = product.resolvedStock <= 5;
-                  const isOutOfStock = product.resolvedStock === 0;
+      {/* Affichage : Tableau ou Grille */}
+      {loading ? (
+        <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl">
+          <p className="text-slate-400 font-mono text-xs">Chargement du catalogue...</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="p-12 text-center space-y-2 bg-white border border-slate-200 rounded-2xl">
+          <p className="text-slate-500 text-xs">Aucun produit trouvé.</p>
+          <Link href="/admin/products/new" className="text-xs font-semibold text-emerald-600 hover:underline">
+            Ajouter votre premier produit
+          </Link>
+        </div>
+      ) : viewMode === 'table' ? (
+        /* --- VUE TABLEAU --- */
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-3 px-4">Produit</th>
+                <th className="py-3 px-4">Catégorie</th>
+                <th className="py-3 px-4">Prix</th>
+                <th className="py-3 px-4">Stock</th>
+                <th className="py-3 px-4">Statut Stock</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {filteredProducts.map((product) => {
+                const isLowStock = product.resolvedStock > 0 && product.resolvedStock <= 5;
+                const isOutOfStock = product.resolvedStock === 0;
 
-                  return (
-                    <tr key={product.id} className="hover:bg-slate-50/50 transition">
-                      <td className="py-3 px-4 flex items-center gap-3">
-                        {product.resolvedImage ? (
-                          <img
-                            src={product.resolvedImage}
-                            alt={product.resolvedName}
-                            className="w-10 h-10 object-cover rounded-xl border border-slate-200 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-xs shrink-0 font-bold">
-                            IMG
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-slate-900">{product.resolvedName}</p>
-                          <p className="text-[11px] text-slate-400 font-mono">ID: {product.id}</p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-medium text-slate-900">
-                        {product.resolvedPrice.toLocaleString()} Ar
-                      </td>
-                      <td className="py-3 px-4 font-mono font-bold">
-                        {product.resolvedStock}
-                      </td>
-                      <td className="py-3 px-4">
-                        {isOutOfStock ? (
-                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-rose-50 text-rose-600 rounded-full border border-rose-100">
-                            Rupture
-                          </span>
-                        ) : isLowStock ? (
-                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-amber-50 text-amber-600 rounded-full border border-amber-100">
-                            Stock faible
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
-                            En stock
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right space-x-1.5">
-                        <button
-                          onClick={() => setSelectedProduct(product)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition text-[11px] border border-slate-200"
-                        >
-                          Détails
-                        </button>
-                        <button
-                          onClick={() => setEditingProduct(product)}
-                          className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-medium transition text-[11px] border border-indigo-100"
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id, product.resolvedName)}
-                          className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium transition text-[11px] border border-rose-100"
-                        >
-                          Supprimer
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                return (
+                  <tr key={product.id} className="hover:bg-slate-50/50 transition">
+                    <td className="py-3 px-4 flex items-center gap-3">
+                      {product.resolvedImage ? (
+                        <img src={product.resolvedImage} alt={product.resolvedName} className="w-10 h-10 object-cover rounded-xl border border-slate-200 shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-xs shrink-0 font-bold">IMG</div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-slate-900">{product.resolvedName}</p>
+                        <p className="text-[11px] text-slate-400 font-mono">ID: {product.id}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-2.5 py-0.5 bg-slate-100 rounded-md font-medium text-[11px] text-slate-600">
+                        {product.resolvedCategory}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono font-medium text-slate-900">{product.resolvedPrice.toLocaleString()} Ar</td>
+                    <td className="py-3 px-4 font-mono font-bold">{product.resolvedStock}</td>
+                    <td className="py-3 px-4">
+                      {isOutOfStock ? (
+                        <span className="px-2.5 py-1 text-[10px] font-semibold bg-rose-50 text-rose-600 rounded-full border border-rose-100">Rupture</span>
+                      ) : isLowStock ? (
+                        <span className="px-2.5 py-1 text-[10px] font-semibold bg-amber-50 text-amber-600 rounded-full border border-amber-100 flex items-center gap-1 w-fit">
+                          <AlertTriangle className="w-3 h-3" /> Stock faible ({product.resolvedStock})
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 text-[10px] font-semibold bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">En stock</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right space-x-1.5">
+                      <button onClick={() => setSelectedProduct(product)} className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition text-[11px] border border-slate-200">Détails</button>
+                      <button onClick={() => setEditingProduct(product)} className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-medium transition text-[11px] border border-indigo-100">Modifier</button>
+                      <button onClick={() => handleDelete(product.id, product.resolvedName)} className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium transition text-[11px] border border-rose-100">Supprimer</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* --- VUE GRILLE --- */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredProducts.map((product) => {
+            const isLowStock = product.resolvedStock > 0 && product.resolvedStock <= 5;
+            const isOutOfStock = product.resolvedStock === 0;
+
+            return (
+              <div key={product.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="w-full h-36 rounded-xl bg-slate-100 overflow-hidden mb-3 relative border border-slate-100">
+                    {product.resolvedImage ? (
+                      <img src={product.resolvedImage} alt={product.resolvedName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">IMG</div>
+                    )}
+                    <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-md text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
+                      {product.resolvedCategory}
+                    </span>
+                    {isOutOfStock ? (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase">Rupture</span>
+                      </div>
+                    ) : isLowStock ? (
+                      <span className="absolute bottom-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                        <AlertTriangle className="w-3 h-3" /> {product.resolvedStock} restants
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{product.resolvedName}</h3>
+                  <p className="text-emerald-600 font-mono font-bold text-sm mt-0.5">{product.resolvedPrice.toLocaleString()} Ar</p>
+                  <p className="text-slate-400 text-[11px] font-mono mt-1">Stock : {product.resolvedStock}</p>
+                </div>
+
+                <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-slate-100">
+                  <button onClick={() => setSelectedProduct(product)} className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium transition">Détails</button>
+                  <button onClick={() => setEditingProduct(product)} className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-[11px] font-medium transition">Modifier</button>
+                  <button onClick={() => handleDelete(product.id, product.resolvedName)} className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition" title="Supprimer">✕</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* --- MODALE DE DÉTAILS --- */}
       {selectedProduct && (
@@ -241,12 +285,7 @@ export default function AdminProductsPage() {
               </div>
             </div>
             <div className="flex justify-end pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition"
-              >
-                Fermer
-              </button>
+              <button onClick={() => setSelectedProduct(null)} className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition">Fermer</button>
             </div>
           </div>
         </div>
@@ -304,19 +343,8 @@ export default function AdminProductsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setEditingProduct(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-sm"
-              >
-                Enregistrer
-              </button>
+              <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition">Annuler</button>
+              <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition shadow-sm">Enregistrer</button>
             </div>
           </form>
         </div>

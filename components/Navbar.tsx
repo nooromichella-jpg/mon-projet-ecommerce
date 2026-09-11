@@ -1,22 +1,17 @@
 // components/Navbar.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCartStore } from '../store/useCartStore';
 import CartDrawer from './CartDrawer';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  slug: string;
-}
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 
 export default function Navbar() {
-  // Tous les hooks au début
   const pathname = usePathname();
   const router = useRouter();
   
@@ -24,116 +19,73 @@ export default function Navbar() {
     state.items.reduce((total, item) => total + (item.quantity || 1), 0)
   );
   const openCart = useCartStore((state) => state.openCart);
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<Product[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
 
+  // États pour la gestion de l'utilisateur et du badge de rôle
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loadingRole, setLoadingRole] = useState(true);
+
+  // Écoute de l'état de connexion et récupération du rôle Firestore
   useEffect(() => {
-    if (searchQuery.trim().length > 0) {
-      setIsSearching(true);
-      fetch('/api/products')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            const filtered = data.data.filter((product: Product) =>
-              product.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-            setSuggestions(filtered.slice(0, 5));
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setIsAdmin(userDoc.data().isAdmin === true);
           }
-          setIsSearching(false);
-        })
-        .catch(() => setIsSearching(false));
-    } else {
-      setSuggestions([]);
-      setIsSearching(false);
-    }
-  }, [searchQuery]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setSuggestions([]);
+        } catch (error) {
+          console.error("Erreur lors de la récupération du rôle :", error);
+        }
+      } else {
+        setUser(null);
+        setIsAdmin(false);
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+      setLoadingRole(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Le return conditionnel à la fin (après les hooks)
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Déconnexion réussie");
+      router.push('/');
+    } catch (error) {
+      toast.error("Erreur lors de la déconnexion");
+    }
+  };
+
+  // Ne pas afficher la navbar sur la page de connexion ou dans l'admin
   if (pathname === '/login' || pathname?.startsWith('/admin')) {
     return null;
   }
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setSuggestions([]);
-      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
 
   return (
     <>
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto flex justify-between items-center gap-4">
+          {/* Logo */}
           <Link href="/" className="text-xl font-bold text-gray-900 flex items-center gap-2 shrink-0">
              <span className="text-emerald-600 hover:opacity-90 transition">NourStore</span>
           </Link>
 
-          <div className="flex-1 max-w-md mx-4 relative" ref={searchRef}>
-            <form onSubmit={handleSearchSubmit} className="relative flex">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher un produit..."
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 transition shadow-xs"
-              />
-              <button
-                type="submit"
-                className="absolute right-0 top-0 bottom-0 bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-r-xl text-sm font-medium transition flex items-center justify-center cursor-pointer"
-              >
-                🔍
-              </button>
-            </form>
-
-            {suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                {suggestions.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.slug}`}
-                    onClick={() => {
-                      setSuggestions([]);
-                      setSearchQuery('');
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition border-b border-gray-50 last:border-none"
-                  >
-                    <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded-lg bg-gray-100" />
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 text-sm line-clamp-1">{product.name}</h4>
-                      <p className="text-emerald-600 font-semibold text-xs">{product.price.toLocaleString()} Ar</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-6 shrink-0">
-            <Link href="/" className="text-gray-600 hover:text-emerald-600 font-medium transition duration-200">
+          {/* Navigation & Actions */}
+          <div className="flex items-center gap-4 shrink-0">
+            <Link href="/" className="text-gray-600 hover:text-emerald-600 font-medium text-sm transition duration-200">
               Accueil
             </Link>
 
-            <Link href="/products" className="text-gray-600 hover:text-emerald-600 font-medium transition duration-200">
+            <Link href="/products" className="text-gray-600 hover:text-emerald-600 font-medium text-sm transition duration-200">
               Produits
             </Link>
 
             <button 
               onClick={openCart}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 border border-gray-200 transform hover:scale-105 active:scale-95 shadow-xs cursor-pointer"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 border border-gray-200 transform hover:scale-105 active:scale-95 shadow-xs cursor-pointer text-sm"
             >
               <span>Panier</span>
               {cartItemsCount > 0 && (
@@ -142,6 +94,45 @@ export default function Navbar() {
                 </span>
               )}
             </button>
+
+            {/* ESPACE AUTHENTIFICATION & BADGE */}
+            {!loadingRole && (
+              user ? (
+                <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
+                  {isAdmin ? (
+                    <div className="flex items-center gap-2">
+                      <span className="bg-purple-100 text-purple-700 text-xs px-2.5 py-1 rounded-full font-semibold border border-purple-200">
+                         Admin
+                      </span>
+                      <Link 
+                        href="/admin" 
+                        className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-xl font-medium hover:bg-slate-800 transition"
+                      >
+                        Dashboard
+                      </Link>
+                    </div>
+                  ) : (
+                    <span className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-semibold border border-emerald-200">
+                        Client
+                    </span>
+                  )}
+
+                  <button 
+                    onClick={handleLogout}
+                    className="text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-xl font-medium transition cursor-pointer"
+                  >
+                    Déconnexion
+                  </button>
+                </div>
+              ) : (
+                <Link 
+                  href="/login"
+                  className="text-xs bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-700 transition"
+                >
+                  Se connecter
+                </Link>
+              )
+            )}
           </div>
         </div>
       </nav>

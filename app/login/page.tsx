@@ -38,8 +38,8 @@ export default function LoginPage() {
     if (userData && userData.isAdmin === true) {
       router.push('/admin');
     } else {
-      // Redirection directe vers le panier pour les clients
-      router.push('/cart');
+      // Redirection directe vers la page d'accueil pour les clients
+      router.push('/');
     }
   };
 
@@ -49,17 +49,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1. On essaie de connecter l'utilisateur s'il existe déjà
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleAuthRedirect(userCredential.user);
     } catch (err: any) {
-      // 2. Si le compte n'existe pas encore, on le CRÉE automatiquement !
       try {
         const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
         await handleAuthRedirect(newUserCredential.user);
       } catch (createErr: any) {
         console.error("Erreur d'authentification :", createErr);
-        // Firebase exige au moins 6 caractères pour le mot de passe
         if (createErr.code === 'auth/weak-password') {
           setError("Le mot de passe doit contenir au moins 6 caractères.");
         } else {
@@ -91,11 +88,10 @@ export default function LoginPage() {
       <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-8 shadow-sm space-y-6">
         
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex items-center justify-center">
             <span className="font-bold text-xl text-slate-900">NourStore</span>
-            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-mono font-semibold">ESPACE CLIENT & ADMIN</span>
           </div>
-          <p className="text-xs text-slate-500">Connectez-vous ou créez votre compte en un clin d'œil pour valider votre panier.</p>
+          <p className="text-xs text-slate-500">Connectez-vous ou créez votre compte en un clin d'œil.</p>
         </div>
 
         {error && (
@@ -134,7 +130,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition shadow-sm disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "Patientez..." : "Continuer vers le panier"}
+            {loading ? "Patientez..." : "Se connecter"}
           </button>
         </form>
 

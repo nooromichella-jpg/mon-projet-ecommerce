@@ -2,8 +2,8 @@
 export default function ProductSkeleton() {
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 flex flex-col animate-pulse">
-      {/* Simulation de l'image */}
-      <div className="w-full h-52 rounded-xl bg-gray-200 mb-4"></div>
+      {/* Simulation de l'image (h-48 pour correspondre aux vraies cartes) */}
+      <div className="w-full h-48 rounded-xl bg-gray-200 mb-4"></div>
       
       {/* Simulation du titre */}
       <div className="h-5 bg-gray-200 rounded-md w-3/4 mb-2"></div>

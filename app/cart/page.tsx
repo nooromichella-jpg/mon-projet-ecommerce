@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useCartStore } from '../../store/useCartStore';
 import Link from 'next/link';
+import { ArrowLeft, Trash2, ShoppingBag, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface CartItem {
   id: string;
@@ -71,58 +72,74 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        <Link href="/products" className="text-blue-600 hover:underline mb-6 inline-block font-medium">
-          &larr; Continuer mes achats
+    <div className="min-h-screen bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        {/* Lien de retour */}
+        <Link 
+          href="/products" 
+          className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 transition bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs"
+        >
+          <ArrowLeft className="w-4 h-4" /> Continuer mes achats
         </Link>
 
-        <h1 className="text-3xl font-bold mb-8 text-gray-900">Mon Panier et Validation</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Mon Panier et Validation</h1>
 
+        {/* Message d'alerte ou de succès */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            {message.text}
+          <div className={`p-4 rounded-xl text-xs font-medium flex items-center gap-2.5 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+            {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+            <span>{message.text}</span>
           </div>
         )}
 
         {items.length === 0 ? (
-          <div className="bg-white rounded-lg p-8 text-center border border-gray-200 shadow-md">
-            <p className="text-gray-600 text-lg mb-4">Votre panier est vide.</p>
-            <Link href="/products" className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-6 rounded-lg transition inline-block shadow-sm">
-              Découvrir les produits
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-xs space-y-4">
+            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+              <ShoppingBag className="w-6 h-6" />
+            </div>
+            <p className="text-slate-600 text-sm font-medium">Votre panier est actuellement vide.</p>
+            <Link href="/products" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl transition shadow-xs text-xs font-medium">
+              Découvrir les produits <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleCheckout} className="space-y-8">
+          <form onSubmit={handleCheckout} className="space-y-6">
+            
             {/* Liste des articles */}
-            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 divide-y divide-gray-100">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900">Articles dans le panier</h2>
+            <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200 divide-y divide-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">Articles dans le panier</h2>
+              
               {items.map((item, index) => {
                 const qty = item.quantity || 1;
                 return (
-                  <div key={`${item.id}-${index}`} className="py-4 flex items-center justify-between first:pt-0 last:pb-0 gap-4">
+                  <div key={`${item.id}-${index}`} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between first:pt-0 last:pb-0 gap-4">
                     <div className="flex items-center space-x-4">
-                      <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-md border border-gray-100" />
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl border border-slate-200 shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-xs shrink-0 font-bold">IMG</div>
+                      )}
                       <div>
-                        <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                        <p className="text-emerald-600 font-bold">{item.price.toLocaleString()} Ar</p>
+                        <h3 className="font-bold text-slate-900 text-sm">{item.name}</h3>
+                        <p className="text-emerald-600 font-mono font-bold text-xs mt-0.5">{item.price.toLocaleString()} Ar</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
+                    <div className="flex items-center justify-between sm:justify-end gap-6">
+                      <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
                         <button 
                           type="button"
                           onClick={() => handleQuantityChange(item.id, qty - 1)}
-                          className="w-7 h-7 bg-white hover:bg-gray-100 text-gray-700 rounded shadow-xs flex items-center justify-center font-bold cursor-pointer"
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer"
                         >
                           -
                         </button>
-                        <span className="w-8 text-center font-medium text-sm">{qty}</span>
+                        <span className="w-8 text-center font-mono font-bold text-xs text-slate-900">{qty}</span>
                         <button 
                           type="button"
                           onClick={() => handleQuantityChange(item.id, qty + 1)}
-                          className="w-7 h-7 bg-white hover:bg-gray-100 text-gray-700 rounded shadow-xs flex items-center justify-center font-bold cursor-pointer"
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer"
                         >
                           +
                         </button>
@@ -131,9 +148,9 @@ export default function CartPage() {
                       <button 
                         type="button"
                         onClick={() => removeItem(item.id)}
-                        className="text-red-500 hover:text-red-700 text-sm font-medium transition cursor-pointer"
+                        className="text-rose-500 hover:text-rose-700 text-xs font-medium transition cursor-pointer flex items-center gap-1"
                       >
-                        Supprimer
+                        <Trash2 className="w-4 h-4" /> Supprimer
                       </button>
                     </div>
                   </div>
@@ -142,81 +159,81 @@ export default function CartPage() {
             </div>
 
             {/* Formulaire d'informations de livraison */}
-            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Informations de livraison</h2>
+            <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200 space-y-4">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Informations de livraison</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nom complet *</label>
                   <input 
                     type="text" 
                     required
                     value={customer.name}
                     onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                     placeholder="Ex: Jean Rakoto" 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Téléphone *</label>
                   <input 
                     type="tel" 
                     required
                     value={customer.phone}
                     onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
                     placeholder="Ex: 034 00 000 00" 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse de livraison *</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Adresse de livraison *</label>
                 <input 
                   type="text" 
                   required
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                  placeholder="Ex: Lot II A 15 Analamahitsy" 
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Ex: Lot II A 15 Analamahitsy, Tana" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email (facultatif)</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email (facultatif)</label>
                 <input 
                   type="email" 
                   value={customer.email}
                   onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                   placeholder="Ex: jean@example.com" 
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
             </div>
 
             {/* Résumé et bouton de validation */}
-            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
               <div>
-                <p className="text-gray-600">Total à payer :</p>
-                <p className="text-3xl font-bold text-emerald-600">{total.toLocaleString()} Ar</p>
+                <p className="text-xs text-slate-500 uppercase font-medium">Total à payer :</p>
+                <p className="text-2xl font-mono font-bold text-emerald-600">{total.toLocaleString()} Ar</p>
               </div>
 
-              <div className="flex gap-3 w-full md:w-auto">
+              <div className="flex items-center gap-3 w-full md:w-auto">
                 <button 
                   type="button"
                   onClick={clearCart} 
                   disabled={loading}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition cursor-pointer font-medium disabled:opacity-50"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl transition cursor-pointer text-xs font-medium disabled:opacity-50"
                 >
-                  Vider
+                  Vider le panier
                 </button>
                 <button 
                   type="submit"
                   disabled={loading}
-                  className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition cursor-pointer shadow-sm disabled:opacity-50 text-center"
+                  className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-medium transition cursor-pointer shadow-sm disabled:opacity-50 text-xs text-center"
                 >
-                  {loading ? 'Validation en cours...' : 'Confirmer la commande'}
+                  {loading ? 'Validation en cours...' : 'Confirmer la commande 🛒'}
                 </button>
               </div>
             </div>
